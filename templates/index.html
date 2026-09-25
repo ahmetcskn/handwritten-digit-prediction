@@ -3,101 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Handwritten Digit Classification Using Neural Network</title>
-    <style>
-        body {
-            background-color: #015958;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            color: #0FC2C0;
-        }
-        canvas {
-            border: 1px solid #0FC2C0;
-            background-color: black;
-        }
-        .buttons {
-            margin-top: 30px;
-            display: flex;
-            gap: 10px;
-        }
-        button {
-            margin: 5px;
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #cccccc;
-            color: black;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #0DA7A5;
-        }
-        #doneButton {
-            display: none;
-        }
-        #result {
-            margin-top: 10px;
-            color: #0FC2C0;
-            font-size: 24px;
-        }
-    </style>
+    <title>Handwritten Digit Recognition</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </head>
 <body>
-    <h1>Handwritten Digit Classification Using Neural Network</h1>
-    <canvas id="canvas" width="300" height="300"></canvas>
-    <div class="buttons">
-        <button onclick="clearCanvas()">Clear</button>
-        <button onclick="predict()">Predict</button>
-        <form action="/train" method="get" style="display: inline;">
-            <button type="submit">Train</button>
-        </form>
-        <form action="/train" method="post" id="trainForm" style="display: inline;">
-            <input type="hidden" name="image" id="imageData">
-            <input type="hidden" name="digit" id="currentDigit" value="{{ current_digit }}">
-            <button type="submit" id="doneButton" onclick="saveImage()">Done</button>
-        </form>
+    <div class="page">
+        <main>
+            <section class="intro">
+                <h1>Handwritten Digit Recognition</h1>
+                <p class="intro-description">Draw a digit from 0 to 9, or train the model with your own examples.</p>
+            </section>
+            <div class="workspace">
+                <section class="card drawing-card" aria-labelledby="drawing-title">
+                    <div class="card-heading">
+                        <div>
+                        <h2 id="drawing-title">{{ 'Draw digit ' ~ current_digit if training_active else 'Draw a digit' }}</h2></div>
+                        <span class="badge">{{ (current_digit + 1) ~ ' of 10' if training_active else '0–9' }}</span>
+                    </div>
+                    <div class="canvas-wrap"><canvas id="canvas" width="300" height="300" aria-label="Draw a digit here with your mouse or touch">Your browser needs HTML canvas support.</canvas></div>
+                    <p class="canvas-hint">One digit at a time. Keep it centered and fill the space.</p>
+                    <div class="canvas-actions">
+                        <button type="button" class="button secondary" id="clearButton">Clear canvas</button>
+                        {% if training_active %}
+                        <form action="/train" method="post" id="trainForm">
+                            <input type="hidden" name="image" id="imageData">
+                            <input type="hidden" name="digit" value="{{ current_digit }}">
+                            <button type="submit" class="button primary" id="doneButton">{{ 'Finish & train' if current_digit == 9 else 'Save & next' }} <span aria-hidden="true">→</span></button>
+                        </form>
+                        {% else %}
+                        <button type="button" class="button primary" id="predictButton">Predict digit <span aria-hidden="true">→</span></button>
+                        {% endif %}
+                    </div>
+                </section>
+                <aside class="side-panel">
+                    <section class="card result-card" aria-labelledby="result-title">
+                        <h2 id="result-title">{{ 'Training progress' if training_active else 'Prediction' }}</h2>
+                        {% if training_active %}
+                        <div class="digit-progress" aria-label="Current digit: {{ current_digit }}">
+                            {% for digit in range(10) %}<span class="{{ 'complete' if digit < current_digit else 'current' if digit == current_digit else '' }}">{{ digit }}</span>{% endfor %}
+                        </div>
+                        <p class="muted">Save one example of each digit. Training starts after your final drawing.</p>
+                        {% else %}
+                        <div class="prediction" aria-live="polite" aria-atomic="true">
+                            <div id="predictedDigit" class="predicted-digit">—</div>
+                            <span id="confidenceLabel" class="confidence-label">Waiting for your drawing</span>
+                            <div class="confidence-track" aria-hidden="true"><div id="confidenceBar"></div></div>
+                        </div>
+                        {% endif %}
+                        <p id="result" class="status-message" role="status">{{ message or ('Draw the requested digit to continue.' if training_active else 'Draw a digit and select Predict digit to get started.') }}</p>
+                    </section>
+                    <section class="card teach-card" aria-labelledby="teach-title">
+                        <h2 id="teach-title">Train the model.</h2>
+                        <p>Add one example per digit and compare accuracy before and after training.</p>
+                        {% if not training_active %}
+                        <form action="/train" method="get"><button type="submit" class="text-button">Start a training session <span aria-hidden="true">↗</span></button></form>
+                        {% else %}
+                        <a class="text-button" href="/">Back to predictions <span aria-hidden="true">↗</span></a>
+                        {% endif %}
+                        <p class="small-note">Training on a few examples can reduce overall accuracy.</p>
+                    </section>
+                </aside>
+            </div>
+            {% if chart_version %}
+            <section class="card training-results" aria-labelledby="training-results-title">
+                <p class="eyebrow">BEFORE & AFTER</p><h2 id="training-results-title">Training results</h2>
+                <p class="muted">Drawing accuracy and performance on 10,000 held-out MNIST test images.</p>
+                <img src="{{ url_for('static', filename='training_accuracy.png', v=chart_version) }}" alt="Drawing accuracy per epoch and MNIST test accuracy before and after fine-tuning">
+            </section>
+            {% endif %}
+        </main>
+        <footer><span>Built with Flask & TensorFlow · Trained on MNIST</span><span>Single-user learning demo</span></footer>
     </div>
-    <div id="result">{{ message if message else '' }}</div>
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <script>
-        function saveImage() {
-            const canvas = document.getElementById('canvas');
-            const dataURL = canvas.toDataURL('image/png');
-            console.log("Saving image, DataURL length:", dataURL.length);
-            document.getElementById('imageData').value = dataURL;
-        }
-
-        window.addEventListener('load', () => {
-            const doneButton = document.getElementById('doneButton');
-            const currentDigitInput = document.getElementById('currentDigit');
-            const trainForm = document.getElementById('trainForm');
-            const trainButton = document.querySelector('form[action="/train"][method="get"] button');
-
-            function updateButtonVisibility() {
-                const digit = parseInt(currentDigitInput.value);
-                if (digit >= 0 && digit <= 9) {
-                    doneButton.style.display = 'inline';
-                    trainForm.style.display = 'inline';
-                    trainButton.style.display = 'none';
-                } else {
-                    doneButton.style.display = 'none';
-                    trainForm.style.display = 'none';
-                    trainButton.style.display = 'inline';
-                }
-            }
-
-            updateButtonVisibility();
-            setInterval(updateButtonVisibility, 500);
-        });
-    </script>
 </body>
 </html>
