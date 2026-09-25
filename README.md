@@ -17,7 +17,7 @@ on MNIST. It also supports fine-tuning the model with digits drawn in the browse
 Python 3.12 is recommended.
 
 ```bash
-git clone https://github.com/ahmetcskn/digit-prediction.git
+git clone https://github.com/ahmetcskn/handwritten-digit-prediction.git
 cd digit-prediction
 python -m venv venv
 source venv/bin/activate
