@@ -1,2 +1,12 @@
+__pycache__/
+*.pyc
+.idea/
 *.h5
-gk
+*.pkl
+*.log
+training_log.txt
+static/training_accuracy.png
+venv/
+.venv/
+.env
+.pytest_cache/
